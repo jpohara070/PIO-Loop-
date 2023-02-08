@@ -1,0 +1,68 @@
+import sys
+import os
+from SolverConnection.solver import Solver
+
+def main():
+    # check if there are enough command line arguments provided
+    if len(sys.argv) < 3:
+        print("Needs 2 arguments (solver path and path to the folder of .cfr files).")
+        return
+
+    # path to the folder of .cfr files
+    folder_path = sys.argv[2]
+    # path to the folder where the extracted ranges will be saved
+    save_folder = os.path.join(folder_path, 'extracted_ranges')
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+
+    # starts the solver process using the provided .exe path
+    connection = Solver(solver=sys.argv[1])
+    # report success
+    print("Solver connected successfully")
+
+    # loop over the .cfr files in the folder
+    for file in os.listdir(folder_path):
+        if file.endswith(".cfr"):
+            # call and print the result of "show metadata" on the provided .cfr file
+            metadata = connection.command(line=f"show_metadata {os.path.join(folder_path, file)}")
+            print_lines(metadata)
+
+            # load the tree
+            output = connection.command(line=f"load_tree {os.path.join(folder_path, file)}")
+            print_lines(output)
+
+            # show hands order (solver will return always the same answer)
+            handorder = connection.command("show_hand_order")
+            print_lines(handorder)
+            
+            # show ranges
+            print("Range OOP:")
+            range_oop = connection.command("show_range OOP r")
+            print_lines(range_oop)
+
+            print("Range IP:")
+            range_ip = connection.command("show_range IP r")
+            print_lines(range_ip)
+
+            # save the ranges to a file
+            with open(os.path.join(save_folder, f"{os.path.splitext(file)[0]}_ranges.txt"), "w") as f:
+                f.write("Range OOP:\n")
+                for line in range_oop:
+                    f.write(line + '\n')
+                f.write("\nRange IP:\n")
+                for line in range_ip:
+                    f.write(line + '\n')
+
+    # we have to explicitely close the solver process
+    print("Closing connection:")
+    connection.exit()
+    print("Connection closed.")
+    print('Done.')
+
+
+def print_lines(lines):
+    for line in lines:
+        print(line)
+
+if __name__ == "__main__":
+    main()
